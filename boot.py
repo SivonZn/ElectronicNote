@@ -7,7 +7,8 @@ import machine, ujson, network, urequests, time, ntptime, esp32
 
 from machine import Timer
 
-import ui as ui
+import ui
+import epd290, uiepd
 #库~
 #===========================================================================================================
 
@@ -41,6 +42,9 @@ tim0 = Timer(1)
 
 #初始定义
 #===========================================================================================================
+
+epd = epd290.EPD_2in9_Portrait()
+#屏幕驱动初始化
 
 def uiprint(x):
     print(x)
@@ -100,7 +104,35 @@ def init_time():#初始化全局时间
     time.sleep_ms(200)
     ntptime.settime()
     time.sleep_ms(2000)
-
+    
+def display_menu(location):
+    epd.fill(0xff)
+    epd.text(uiepd.menu1, 5, 10, 0x00)
+    epd.text(uiepd.menu2, 5, 20, 0x00)
+    epd.text(uiepd.menu3, 5, 30, 0x00)
+    epd.text(uiepd.selector, 13, 10 * location + 10, 0x00)
+    epd.display(epd.buffer)
+    
+def display_selector(location):
+    epd.fill_rect(13, 10, 8, 50, 0xff)
+    epd.text(uiepd.selector, 13, 10 * location + 10, 0x00)
+    epd.display(epd.buffer)
+    
+def display_true_false(location):
+    epd.fill(0xff)
+    epd.text(uiepd.true_false1, 5, 10, 0x00)
+    epd.text(uiepd.true_false2, 5, 20, 0x00)
+    epd.text(uiepd.selector, 13, 10 * location + 10, 0x00)
+    epd.display(epd.buffer)
+    
+def display_speed(location):
+    epd.fill(0xff)
+    epd.text(uiepd.update_speed1, 5, 10, 0x00)
+    epd.text(uiepd.update_speed2, 5, 20, 0x00)
+    epd.text(uiepd.update_speed3, 5, 30, 0x00)
+    epd.text(uiepd.selector, 13, 10 * location + 10, 0x00)
+    epd.display(epd.buffer)
+    
 #高级功能初始化
 #===========================================================================================================
 
@@ -149,6 +181,7 @@ def setting_power_save_mode():#设置夜间1到6点停止更新数据，进入�
     global SAVESET
     
     uiprint(ui.tfarr[SAVESET])
+    display_true_false(SAVESET)
     while enter_pin.value():
         time.sleep_ms(50)
     
@@ -160,6 +193,7 @@ def setting_power_save_mode():#设置夜间1到6点停止更新数据，进入�
             tim0.deinit()
             tim0.init(period=30000,mode=Timer.ONE_SHOT,callback=menuexit)
             uiprint(ui.menuarr[MENUSET])
+            display_menu(MENUSET)
             while enter_pin.value():
                 time.sleep_ms(50)
             return
@@ -171,6 +205,7 @@ def setting_power_save_mode():#设置夜间1到6点停止更新数据，进入�
             time.sleep_ms(30)
             SAVESET = not SAVESET
             uiprint(ui.tfarr[SAVESET])
+            display_selector(SAVESET)
             
             while up_pin.value() or down_pin.value():
                 time.sleep_ms(30)
@@ -186,6 +221,7 @@ def setting_power_save_mode():#设置夜间1到6点停止更新数据，进入�
             uiprint("Success!")
             time.sleep_ms(1000)
             uiprint(ui.menuarr[MENUSET])
+            display_menu(MENUSET)
             
             while enter_pin.value():
                 time.sleep_ms(50)
@@ -195,6 +231,7 @@ def setting_power_save_mode():#设置夜间1到6点停止更新数据，进入�
 def setting_update_speed():#设置数据更新速度，3到30分钟不等
     global SPEEDSET
     uiprint(ui.updatearr[SPEEDSET])
+    display_speed(SPEEDSET)
     while enter_pin.value():
         time.sleep_ms(50)
     while True:
@@ -207,6 +244,7 @@ def setting_update_speed():#设置数据更新速度，3到30分钟不等
             time.sleep_ms(30)
             
             uiprint(ui.menuarr[MENUSET])
+            display_menu(MENUSET)
             return
         
         if up_pin.value():
@@ -222,6 +260,7 @@ def setting_update_speed():#设置数据更新速度，3到30分钟不等
             while up_pin.value():
                 time.sleep_ms(30)
             uiprint(ui.updatearr[SPEEDSET])
+            display_selector(SPEEDSET)
             
         if down_pin.value():
             tim0.deinit()
@@ -232,11 +271,11 @@ def setting_update_speed():#设置数据更新速度，3到30分钟不等
                 SPEEDSET = 0
             else:
                 SPEEDSET = SPEEDSET + 1
-            uiprint(SPEEDSET)
             
             while down_pin.value():
                 time.sleep_ms(30)
             uiprint(ui.updatearr[SPEEDSET])
+            display_selector(SPEEDSET)
             
         if enter_pin.value():
             tim0.deinit()
@@ -252,6 +291,7 @@ def setting_update_speed():#设置数据更新速度，3到30分钟不等
             uiprint("Success!")
             time.sleep_ms(1000)
             uiprint(ui.menuarr[MENUSET])
+            display_menu(MENUSET)
             
             while enter_pin.value():
                 time.sleep_ms(50)
@@ -263,6 +303,7 @@ def setting_clock_show():#设置是否显示当前时间（省电？）
     global CLOCKSET
     
     uiprint(ui.tfarr[CLOCKSET])
+    display_true_false(CLOCKSET)
     while enter_pin.value():
         time.sleep_ms(50)
     
@@ -274,6 +315,7 @@ def setting_clock_show():#设置是否显示当前时间（省电？）
             tim0.deinit()
             tim0.init(period=30000,mode=Timer.ONE_SHOT,callback=menuexit)
             uiprint(ui.menuarr[MENUSET])
+            display_menu(MENUSET)
             while enter_pin.value():
                 time.sleep_ms(50)
             return
@@ -285,6 +327,7 @@ def setting_clock_show():#设置是否显示当前时间（省电？）
             time.sleep_ms(30)
             CLOCKSET = not CLOCKSET
             uiprint(ui.tfarr[CLOCKSET])
+            display_selector(CLOCKSET)
             
             while up_pin.value() or down_pin.value():
                 time.sleep_ms(30)
@@ -300,6 +343,7 @@ def setting_clock_show():#设置是否显示当前时间（省电？）
             uiprint("Success!")
             time.sleep_ms(1000)
             uiprint(ui.menuarr[MENUSET])
+            display_menu(MENUSET)
             
             while enter_pin.value():
                 time.sleep_ms(50)
@@ -321,6 +365,7 @@ def start_menu():
     
     tim0.init(period=30000,mode=Timer.ONE_SHOT,callback=menuexit)
     uiprint(ui.menuarr[MENUSET])
+    display_menu(MENUSET)
     
     while True:
         if EXIT_STATE:
@@ -344,6 +389,7 @@ def start_menu():
             while up_pin.value():
                 time.sleep_ms(30)
             uiprint(ui.menuarr[MENUSET])
+            display_selector(MENUSET)
         
         if down_pin.value():
             tim0.deinit()
@@ -358,6 +404,7 @@ def start_menu():
             while down_pin.value():
                 time.sleep_ms(30)
             uiprint(ui.menuarr[MENUSET])
+            display_selector(MENUSET)
         
         if enter_pin.value():
             tim0.deinit()

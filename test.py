@@ -29,4 +29,3 @@ while DEBUG < 2:
         machine.lightsleep(config['setting_update_speed'] * 1000 * 60)
     else:
         machine.lightsleep(57 * 1000)#需要加上 *60 ,调试未加入方便减少时间
-    DEBUG = DEBUG + 1
