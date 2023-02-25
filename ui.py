@@ -1,16 +1,16 @@
-menu1 = '''
+basic_menu1 = '''
 [*] power_save_mode
 [ ] update_speed
 [ ] clock_show
 '''
 
-menu2 = '''
+basic_menu2 = '''
 [ ] power_save_mode
 [*] update_speed
 [ ] clock_show
 '''
 
-menu3 = '''
+basic_menu3 = '''
 [ ] power_save_mode
 [ ] update_speed
 [*] clock_show
@@ -43,7 +43,21 @@ true_false2 = '''
 [ ] True
 [*] False
 '''
+menu1 = '''
+[*] basic_setting
+[ ] advanced_setting
+'''
 
-menuarr = [menu1, menu2, menu3]
+menu2 = '''
+[ ] basic_setting
+[*] advanced_setting
+'''
+
+other_menu1 = '''
+[*] Recovery
+'''
+basic_menuarr = [basic_menu1, basic_menu2, basic_menu3]
 updatearr = [update_speed1, update_speed2, update_speed3]
 tfarr = [true_false1, true_false2]
+menuarr = [menu1, menu2]
+other_menuarr = [other_menu1]

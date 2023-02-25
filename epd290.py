@@ -39,7 +39,21 @@ RST_PIN         = 19
 DC_PIN          = 18
 CS_PIN          = 15
 BUSY_PIN        = 17
+full_update = [
+            0x50, 0xAA, 0x55, 0xAA, 0x11, 0x00,
+            0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+            0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+            0x00, 0x00, 0xFF, 0xFF, 0x1F, 0x00,
+            0x00, 0x00, 0x00, 0x00, 0x00, 0x00
+        ]
 
+partial_update  = [
+            0x10, 0x18, 0x18, 0x08, 0x18, 0x18,
+            0x08, 0x00, 0x00, 0x00, 0x00, 0x00,
+            0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+            0x00, 0x00, 0x13, 0x14, 0x44, 0x12,
+            0x00, 0x00, 0x00, 0x00, 0x00, 0x00
+        ]
 
 class EPD_2in9_Portrait(framebuf.FrameBuffer):
     def __init__(self):
@@ -50,23 +64,9 @@ class EPD_2in9_Portrait(framebuf.FrameBuffer):
         self.width = EPD_WIDTH
         self.height = EPD_HEIGHT
         
-        lut_full_update = [
-            0x50, 0xAA, 0x55, 0xAA, 0x11, 0x00,
-            0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-            0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-            0x00, 0x00, 0xFF, 0xFF, 0x1F, 0x00,
-            0x00, 0x00, 0x00, 0x00, 0x00, 0x00
-        ]
 
-        lut_partial_update  = [
-            0x10, 0x18, 0x18, 0x08, 0x18, 0x18,
-            0x08, 0x00, 0x00, 0x00, 0x00, 0x00,
-            0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-            0x00, 0x00, 0x13, 0x14, 0x44, 0x12,
-            0x00, 0x00, 0x00, 0x00, 0x00, 0x00
-        ]
+        self.lut = partial_update
         
-        self.lut = lut_partial_update
         
         self.spi = SPI(1)
         self.spi.init(baudrate=4000_000)
@@ -74,7 +74,7 @@ class EPD_2in9_Portrait(framebuf.FrameBuffer):
         
         self.buffer = bytearray(self.height * self.width // 8)
         super().__init__(self.buffer, self.width, self.height, framebuf.MONO_HLSB)
-        self.init()
+        self.init(self.lut)
 
     def digital_write(self, pin, value):
         pin.value(value)
@@ -83,7 +83,7 @@ class EPD_2in9_Portrait(framebuf.FrameBuffer):
         return pin.value()
 
     def delay_ms(self, delaytime):
-        utime.sleep(delaytime / 1000.0)
+        utime.sleep_ms(delaytime)
 
     def spi_writebyte(self, data):
         self.spi.write(bytearray(data))
@@ -94,11 +94,11 @@ class EPD_2in9_Portrait(framebuf.FrameBuffer):
     # Hardware reset
     def reset(self):
         self.digital_write(self.reset_pin, 1)
-        self.delay_ms(200) 
+        self.delay_ms(50) 
         self.digital_write(self.reset_pin, 0)
         self.delay_ms(2)
         self.digital_write(self.reset_pin, 1)
-        self.delay_ms(200)   
+        self.delay_ms(50)   
 
     def send_command(self, command):
         self.digital_write(self.dc_pin, 0)
@@ -113,10 +113,8 @@ class EPD_2in9_Portrait(framebuf.FrameBuffer):
         self.digital_write(self.cs_pin, 1)
         
     def ReadBusy(self):
-        print("e-Paper busy")
         while(self.digital_read(self.busy_pin) == 1):      #  0: idle, 1: busy
-            self.delay_ms(10) 
-        print("e-Paper busy release")  
+            pass
 
     def TurnOnDisplay(self):
         self.send_command(0x22) # DISPLAY_UPDATE_CONTROL_2
@@ -126,10 +124,10 @@ class EPD_2in9_Portrait(framebuf.FrameBuffer):
         
         self.ReadBusy()
 
-    def SendLut(self):
+    def SendLut(self, lut):
         self.send_command(0x32)
-        for i in range(0, len(self.lut)):
-            self.send_data(self.lut[i])
+        for i in range(0, len(lut)):
+            self.send_data(lut[i])
         self.ReadBusy()
 
     def SetWindow(self, x_start, y_start, x_end, y_end):
@@ -152,7 +150,7 @@ class EPD_2in9_Portrait(framebuf.FrameBuffer):
         self.send_data((y >> 8) & 0xFF)
         self.ReadBusy()
         
-    def init(self):
+    def init(self, lut):
         # EPD hardware init start     
         self.reset()
 
@@ -179,7 +177,7 @@ class EPD_2in9_Portrait(framebuf.FrameBuffer):
         self.send_command(0x11) # DATA_ENTRY_MODE_SETTING
         self.send_data(0x03) # X increment Y increment
         self.ReadBusy()
-        self.SendLut()
+        self.SendLut(lut)
         # EPD hardware init end
         return 0
 
@@ -187,6 +185,7 @@ class EPD_2in9_Portrait(framebuf.FrameBuffer):
         if (image == None):
             return
         self.SetWindow(0, 0, self.width - 1, self.height - 1)
+        
         for j in range(0, self.height):
             self.SetCursor(0, j)
             self.send_command(0x24)
@@ -196,6 +195,7 @@ class EPD_2in9_Portrait(framebuf.FrameBuffer):
         
     def Clear(self, color):
         self.SetWindow(0, 0, self.width - 1, self.height - 1)
+        self.send_command(0x24) # WRITE_RAM
         for j in range(0, self.height):
             self.SetCursor(0, j)
             self.send_command(0x24) # WRITE_RAM
@@ -210,70 +210,3 @@ class EPD_2in9_Portrait(framebuf.FrameBuffer):
         self.delay_ms(2000)
         self.module_exit()
         
-
-if __name__=='__main__':
-    # Landscape
-    epd = EPD_2in9_Landscape()
-    epd.Clear(0xff)
-    
-    epd.fill(0xff)
-    epd.text("Waveshare", 5, 10, 0x00)
-    epd.text("Pico_ePaper-2.9", 5, 20, 0x00)
-    epd.text("Raspberry Pico", 5, 30, 0x00)
-    epd.display(epd.buffer)
-    epd.delay_ms(2000)
-    
-    epd.vline(10, 40, 60, 0x00)
-    epd.vline(120, 40, 60, 0x00)
-    epd.hline(10, 40, 110, 0x00)
-    epd.hline(10, 100, 110, 0x00)
-    epd.line(10, 40, 120, 100, 0x00)
-    epd.line(120, 40, 10, 100, 0x00)
-    epd.display(epd.buffer)
-    epd.delay_ms(2000)
-    
-    epd.rect(150, 5, 50, 55, 0x00)
-    epd.fill_rect(150, 65, 50, 115, 0x00)
-    epd.display_Base(epd.buffer)
-    epd.delay_ms(2000)
-    
-    for i in range(0, 10):
-        epd.fill_rect(220, 60, 10, 10, 0xff)
-        epd.text(str(i), 222, 62, 0x00)
-        epd.display_Partial(epd.buffer)
-
-    # Portrait
-    epd = EPD_2in9_Portrait()
-    epd.Clear(0xff)
-    
-    epd.fill(0xff)
-    epd.text("Waveshare", 5, 10, 0x00)
-    epd.text("Pico_ePaper-2.9", 5, 40, 0x00)
-    epd.text("Raspberry Pico", 5, 70, 0x00)
-    epd.display(epd.buffer)
-    epd.delay_ms(2000)
-    
-    epd.vline(10, 90, 60, 0x00)
-    epd.vline(120, 90, 60, 0x00)
-    epd.hline(10, 90, 110, 0x00)
-    epd.hline(10, 150, 110, 0x00)
-    epd.line(10, 90, 120, 150, 0x00)
-    epd.line(120, 90, 10, 150, 0x00)
-    epd.display(epd.buffer)
-    epd.delay_ms(2000)
-    
-    epd.rect(10, 180, 50, 80, 0x00)
-    epd.fill_rect(70, 180, 50, 80, 0x00)
-    epd.display_Base(epd.buffer)
-    epd.delay_ms(2000)
-    
-    for i in range(0, 10):
-        epd.fill_rect(40, 270, 40, 10, 0xff)
-        epd.text(str(i), 60, 270, 0x00)
-        epd.display_Partial(epd.buffer)
-
-    epd.init()
-    epd.Clear(0xff)
-    epd.delay_ms(2000)
-    print("sleep")
-    epd.sleep()

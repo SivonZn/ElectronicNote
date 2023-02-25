@@ -1,12 +1,12 @@
-menu1 = "[ ]power_save_mode"
-menu2 = "[ ]update_speed"
-menu3 = "[ ]clock_show"
+menu1 = "[ ]basic_menu"
+menu2 = "[ ]other_menu"
+basic_menu1 = "[ ]power_save_mode"
+basic_menu2 = "[ ]update_speed"
+basic_menu3 = "[ ]clock_show"
 update_speed1 = "[ ]5min"
 update_speed2 = "[ ]10min"
 update_speed3 = "[ ]15min"
 true_false1 = "[ ]True"
 true_false2 = "[ ]False"
+other_menu1 = "[ ]Recovery"
 selector = "*"
-
-
-    

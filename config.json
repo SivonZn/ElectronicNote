@@ -1,1 +1,1 @@
-{"first_init":false, "ssid":"Xiaomi 12", "password":"11111111", "setting_update_speed":10, "setting_clock_show":true, "setting_power_save_mode":true, "update_url":"http://jsonplaceholder.typicode.com/albums/1"}
+{"first_init":false, "ssid":"Xiaomi 12", "password":"11111111", "setting_update_speed":10, "setting_clock_show":true, "setting_power_save_mode":true, "update_url":"http://jsonplaceholder.typicode.com/albums/1", "weather_url":"https://api.seniverse.com/v3/weather/now.json?key=SiP2-52d68hakylIl&location=fuzhou&language=en&unit=c"}
