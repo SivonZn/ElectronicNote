@@ -1,3 +1,4 @@
+import menu
 DEBUG = 0
 load_config()
 wifi_init_sta()
