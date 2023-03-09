@@ -1,4 +1,3 @@
-import menu
 DEBUG = 0
 load_config()
 wifi_init_sta()
@@ -8,17 +7,17 @@ else:
     uiprint("WiFi Connected!")
 check_wlan_connect()
 get_webcontext()
-init_time()
+#init_time()
 
 while DEBUG < 2:
     if machine.wake_reason() == PIN_WAKE:
-        _thread.start_new_thread(uiprint,(2,))
+        _thread.start_new_thread(wifi_connect_background,())
         menu.start_menu()
         pass
     
     if not wifi.isconnected():
         wifi_init_sta()
-        wifi_connect()
+        wifi_connect_background()
 
     start_note_home()
 
@@ -29,5 +28,8 @@ while DEBUG < 2:
 
     if not config['setting_clock_show']:
         machine.lightsleep(config['setting_update_speed'] * 1000 * 60)
+        get_webcontext()
     else:
+        get_webcontext()
         machine.lightsleep((60 - timertc[5]) * 1000)#需要加上 *60 ,调试未加入方便减少时间
+    DEBUG = DEBUG + 1

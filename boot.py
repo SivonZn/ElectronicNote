@@ -8,7 +8,7 @@ import machine, ujson, network, urequests, time, ntptime, esp32, framebuf
 from machine import Timer
 
 import ui
-import epd290, uiepd, image
+import epd290, uiepd, image, ufont
 import _thread
 #库~
 #===========================================================================================================
@@ -39,6 +39,9 @@ tim0 = Timer(1)#timenu
 timupdate = Timer(1)#timeupdate
 #计时器定义
 
+font = ufont.BMFont("unifont-14-12917-16.v3.bmf")
+#字体加载
+
 #初始定义
 #===========================================================================================================
 
@@ -51,6 +54,7 @@ imagebuf = framebuf.FrameBuffer(bytearray(image.boot_image), 50, 50, framebuf.MO
 epd.blit(imagebuf, 40, 110)
 epd.text("Sivon&Parallfolk", 0, 288, 0x00)
 epd.display(epd.buffer)
+del imagebuf
 
 #屏幕驱动初始化
 
@@ -64,13 +68,20 @@ def display_print(x, y, data):
     epd.display(epd.buffer)
 
 def display_add(x, y, data):
-    epd.text(data, x, y, 0x00)
-
-def display_image(x, y, xlen, ylen, data):
-    for i in xlen:
-        for j in ylen:
-            epd.pixel(x + j, y + i, data[i * 10 + j])
-    epd.display(epd.buffer)
+    i = 0
+    j = 0
+    while i != len(data):
+        if j * 8 + 8 + x < epd290.EPD_WIDTH:
+            epd.text(data[i], j * 8 + x, y, 0x00)
+            j = j + 1
+            i = i + 1
+        else:
+            y = y + 10
+            j = 0
+    
+def display_add_blit(x, y, xlen, ylen, data):
+    imagebuf = framebuf.FrameBuffer(bytearray(data), xlen, ylen, framebuf.MONO_HLSB)
+    epd.blit(imagebuf, x, y)
     
 def display_on():
     epd.display(epd.buffer)
@@ -192,7 +203,7 @@ def wifi_connect():#WiFi连接
         i += 1
         if wifi.isconnected():
             uiprint("WiFi Connected!")
-            display_add(5, 20, "WiFi Connected!")
+            display_add(5, 30, "WiFi Connected!")
             display_on()
             break
     if not wifi.isconnected():
@@ -209,7 +220,6 @@ def wifi_connect_background():#WiFi连接
             break
     if not wifi.isconnected():
         uiprint("WiFi Connect Error! Plase check the WiFi config or your ruote")
-        raise Exception('WiFi Connect Error! Plase check the WiFi config or your ruote')
     pass
 
 def check_wlan_connect():#检查网络连接
@@ -217,7 +227,7 @@ def check_wlan_connect():#检查网络连接
     try:
         response = urequests.get(config['update_url'])
         uiprint("Internet Connected!")
-        display_add(5, 30, "Internet Connected!")
+        display_add(5, 40, "Internet Connected!")
         display_on()
     except:
         uiprint("Internet Connect Error!")
@@ -247,7 +257,6 @@ def get_webcontext():
     except:
         pass
     uiprint("up to date")
-    timupdate.init(period=1 * 60 * 1000, mode=Timer.ONE_SHOT, callback=tim_get_webcontext)
 #=========================================
 def tim_get_webcontext(timupdate):
     global config
@@ -259,11 +268,19 @@ def print_webcontext():#打印网页内容
     global respj
     global weatj
     uiprint(respj['title'])
-    display_add(5, 30,respj['title'])
+    display_add(5, 40, respj['title'])
+    epd.hline(0, 30, 128, 0x00)
+    epd.vline(88, 0, 30, 0x00)
     uiprint(weatj.get('results')[0].get('now')['text'])
     display_add(5, 5, weatj.get('results')[0].get('now')['text'])
+    codetemp = weatj.get('results')[0].get('now')['code']
+    code = int(codetemp, 16)
+    imageweather = framebuf.FrameBuffer(bytearray(image.weather[code]), 24, 24, framebuf.MONO_HLSB)
+    epd.blit(imageweather, 5, 4)
     uiprint(weatj.get('results')[0].get('now')['temperature'])
-    display_add(104, 5, weatj.get('results')[0].get('now')['temperature'])
+    display_add(96, 10, "%sC" %(weatj.get('results')[0].get('now')['temperature']))
+    
+    display_on()
     time.sleep_ms(10)
 
 def print_time():#打印当前时间
@@ -271,7 +288,16 @@ def print_time():#打印当前时间
     timertc = time.localtime()
     uiprint("%d/%d/%d %d:%d:%d" %(timertc[0], timertc[1], timertc[2], timertc[3], timertc[4], timertc[5]))
     display_add(5, 278, "%d/%d/%d" %(timertc[0], timertc[1], timertc[2]))
-    display_add(5, 288, "%d:%d:%d" %(timertc[3], timertc[4], timertc[5]))
+    if timertc[3] > 9:
+        if timertc[4] > 9:
+            display_add(5, 288, "%d:%d" %(timertc[3], timertc[4]))
+        else:
+            display_add(5, 288, "%d:0%d" %(timertc[3], timertc[4]))
+    else:
+        if timertc[4] > 9:
+            display_add(5, 288, "0%d:%d" %(timertc[3], timertc[4]))
+        else:
+            display_add(5, 288, "0%d:0%d" %(timertc[3], timertc[4]))
     time.sleep_ms(10)
     pass
 #===========================================================================================================
